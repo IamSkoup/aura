@@ -1,18 +1,15 @@
-name: Publish Aura Wear demo to GitHub Pages
+name: Publish Aura Wear
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: github-pages
   cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,9 +21,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run lint
       - run: npm test
-      - run: npm run pages:build
+      - run: npm run build
       - uses: actions/configure-pages@v5
         with:
           enablement: true

@@ -1,0 +1,6 @@
+export type PrintArea = {id: string; label: string; widthMm: number; heightMm: number; minDpi: number; extraPriceRub: number};
+export type Product = {id: string; name: string; slug: string; category: string; description: string; priceRub: number; image: string; model?: string; colors: {name: string; hex: string}[]; sizes: string[]; optionLabel?: string; printAreas: PrintArea[]; stock: number; published: boolean; createdAt: number; previewOnly?: boolean};
+export type Layer = {id: string; kind: 'image'|'text'; areaId: string; x: number; y: number; width: number; height: number; rotation: number; opacity: number; image?: {assetId: string; url: string; width: number; height: number; name: string}; text?: string; font?: string; color?: string; fontSize?: number; letterSpacing?: number; weight?: number; align?: 'left'|'center'|'right'; italic?: boolean; flipX?: boolean; flipY?: boolean; isPaint?: boolean};
+export type Design = {id: string; ownerId: string; productId: string; color: string; size: string; layers: Layer[]; title: string; isPublic: boolean; createdAt: number; updatedAt: number; previewUrl?: string};
+export type CartLine = {designId: string; productId: string; quantity: number};
+export const money = (value: number) => new Intl.NumberFormat('ru-RU').format(value) + ' ₽';

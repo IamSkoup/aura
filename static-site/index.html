@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#151515" />
     <meta name="description" content="Aura Wear — демонстрация каталога и 3D-конструктора одежды. Проекты сохраняются в вашем браузере; заказы и оплата не принимаются." />
     <title>Aura Wear — Твой стиль. Твои правила.</title>
+    <script>try{const choice=localStorage.getItem('aura-theme')||'system';document.documentElement.dataset.theme=choice==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):choice;}catch{document.documentElement.dataset.theme='light'}</script>
   </head>
   <body>
     <div id="root"></div>

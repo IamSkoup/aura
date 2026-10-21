@@ -1,5 +1,0 @@
-'use client';
-import {useEffect,useState} from 'react';
-import Link from 'next/link';
-import {useAuth} from './AuthProvider';
-export function AdminGuard({children}:{children:React.ReactNode}){const {user,loading}=useAuth();const [admin,setAdmin]=useState<boolean|null>(null);useEffect(()=>{if(user)user.getIdTokenResult(true).then(r=>setAdmin(r.claims.admin===true)).catch(()=>setAdmin(false));else setAdmin(false)},[user]);if(loading||admin===null)return <div className="container section skeleton"/>;if(!admin)return <div className="container section empty-state"><h1>Доступ ограничен.</h1><p>Эта страница доступна только подтверждённым администраторам.</p><Link href="/" className="button button-dark">На главную</Link></div>;return <div className="container admin-layout"><nav className="admin-nav"><Link href="/admin">Обзор</Link><Link href="/admin/products">Товары</Link><Link href="/admin/templates">Принты</Link><Link href="/admin/orders">Заказы</Link><Link href="/admin/reviews">Отзывы</Link><Link href="/admin/setup">Подключение</Link></nav>{children}</div>}

@@ -1,4 +1,0 @@
-'use client';
-import {useEffect,useState} from 'react';
-import {api} from '@/lib/firebase-client';
-export function LegalDocuments(){const [data,setData]=useState<{merchantName:string;privacyPolicy:string;offer:string;returnPolicy:string;contactEmail:string}|null>(null);useEffect(()=>{api<typeof data>('/api/legal').then(setData).catch(()=>{})},[]);if(!data?.privacyPolicy||!data?.offer||!data?.returnPolicy)return <div className="notice"><strong>Документы ещё не опубликованы.</strong><p>Политика конфиденциальности, оферта и правила возврата должны быть предоставлены продавцом для России. Приём реальных заказов закрыт до их публикации.</p></div>;return <div className="legal-documents"><p>Продавец: {data.merchantName}</p><h2>Политика обработки персональных данных</h2><div>{data.privacyPolicy}</div><h2>Публичная оферта</h2><div>{data.offer}</div><h2>Правила возврата</h2><div>{data.returnPolicy}</div><p>Контакт: {data.contactEmail}</p></div>}

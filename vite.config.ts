@@ -7,6 +7,6 @@ export default defineConfig({
   base: '/aura/',
   publicDir: '../public',
   plugins: [react()],
-  resolve: {alias: {'@': path.resolve(__dirname, 'src')}},
+  resolve: {alias: {'@': path.resolve(__dirname, 'static-site')}},
   build: {outDir: '../dist-pages', emptyOutDir: true},
 });
