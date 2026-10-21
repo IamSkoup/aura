@@ -1,0 +1,2 @@
+import {db} from './firebase-admin';
+export async function rateLimit(uid:string,kind:'upload'|'checkout'|'payment',max:number,windowMs:number){const ref=db().ref(`rateLimits/${uid}/${kind}`);const now=Date.now();const result=await ref.transaction((value:{start:number;count:number}|null)=>{if(!value||now-value.start>=windowMs)return {start:now,count:1};if(value.count>=max)return;return {...value,count:value.count+1}});if(!result.committed)throw new Error('Слишком много запросов. Попробуйте позже.');}

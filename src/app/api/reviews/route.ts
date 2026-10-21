@@ -1,0 +1,11 @@
+import {NextRequest} from 'next/server';
+import {z} from 'zod';
+import {db,userFromRequest} from '@/lib/firebase-admin';
+import {withTimeout} from '@/lib/timeout';
+import {fail,json} from '@/lib/server';
+import type {Order} from '@/lib/types';
+const schema=z.object({orderId:z.string(),productId:z.string(),rating:z.number().int().min(1).max(5),text:z.string().min(20).max(1500),photoAssetIds:z.array(z.string()).max(4),consentPhotos:z.boolean()});
+export const runtime='nodejs';
+export async function GET(req:NextRequest){try{const snap=await withTimeout(db().ref('reviews').get());const productId=req.nextUrl.searchParams.get('product');const items=Object.values(snap.val()||{}).filter((v):v is Record<string,unknown>=>!!v&&typeof v==='object').filter(r=>r.published===true&&(!productId||r.productId===productId)).map(r=>({id:r.id,productId:r.productId,rating:r.rating,text:r.text,photoAssetIds:r.consentPhotos?r.photoAssetIds:[],createdAt:r.createdAt,authorName:r.authorName}));return json({items});}catch(e){return fail(e,503)}}
+export async function POST(req:NextRequest){try{const u=await userFromRequest(req);const input=schema.parse(await req.json());const order=(await db().ref(`orders/${input.orderId}`).get()).val() as Order|null;if(!order||order.userId!==u.uid||order.status!=='delivered'||!order.payment?.confirmedAt||order.payment.test||!order.lines.some(l=>l.productId===input.productId))throw new Error('Отзыв доступен после подтверждённой доставки и оплаты');if(input.photoAssetIds.length&&!input.consentPhotos)throw new Error('Нужно разрешение на публикацию фотографий');for(const id of input.photoAssetIds){const asset=(await db().ref(`assets/${id}`).get()).val();if(!asset||asset.ownerId!==u.uid)throw new Error('Фотография недоступна')}
+ const index=db().ref(`reviewIndex/${input.orderId}/${input.productId}`);const id=db().ref('reviews').push().key!;const reservation=await index.transaction(current=>current?undefined:id);if(!reservation.committed)throw new Error('Отзыв уже отправлен');const review={...input,id,userId:u.uid,authorName:'Покупатель Aura',published:false,rejected:false,createdAt:Date.now()};try{await db().ref(`reviews/${id}`).set(review)}catch(e){await index.transaction(current=>current===id?null:undefined);throw e}return json({review:{id,published:false}},201);}catch(e){return fail(e)}}
