@@ -2,9 +2,9 @@
   "rules": {
     ".read": false,
     ".write": false,
-    "products": { ".indexOn": ["category", "published"], "$id": { ".read": "data.child('published').val() === true" } },
+    "products": { ".indexOn": ["category", "published"], ".read": "query.orderByChild === 'published' && query.equalTo === true", "$id": { ".read": "data.child('published').val() === true" } },
     "categories": { ".read": true },
-    "designTemplates": { "$id": { ".read": "data.child('published').val() === true" } },
+    "designTemplates": { ".indexOn": ["published"], ".read": "query.orderByChild === 'published' && query.equalTo === true", "$id": { ".read": "data.child('published').val() === true" } },
     "publicDesigns": { "$id": { ".read": true } },
     "userDesigns": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
     "users": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
