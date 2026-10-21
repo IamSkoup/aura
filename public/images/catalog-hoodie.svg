@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="900" viewBox="0 0 800 900">
+ <defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#272d28"/><stop offset=".55" stop-color="#41463e"/><stop offset="1" stop-color="#111815"/></linearGradient><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8ddd4"/><stop offset="1" stop-color="#929e8e"/></linearGradient></defs>
+ <rect width="800" height="900" fill="#e1e3dc"/><circle cx="410" cy="365" r="330" fill="url(#a)" opacity=".18"/>
+ <g filter="url(#shadow)"><path d="M268 203 Q312 165 349 166 L456 166 Q501 163 534 202 L663 308 L631 533 L559 499 L552 745 L248 745 L241 499 L173 533 L144 310Z" fill="url(#b)" stroke="#171b18" stroke-width="9"/>
+ <path d="M315 198 Q310 107 400 91 Q489 107 481 198 Q463 250 400 268 Q336 251 315 198Z" fill="#30352e" stroke="#656c62" stroke-width="11"/><path d="M343 188 Q359 129 399 129 Q447 132 456 190" fill="none" stroke="#171b18" stroke-width="19"/>
+ <path d="M342 219 L370 351 M459 219 L429 351" fill="none" stroke="#e2e3db" stroke-width="8" stroke-linecap="round"/>
+ <path d="M325 552 L306 653 Q403 701 491 653 L472 552" fill="none" stroke="#20251f" stroke-width="15"/><path d="M256 726 L544 726" stroke="#636d60" stroke-width="12"/>
+ <path d="M175 515 L242 485 M559 488 L630 518" stroke="#697467" stroke-width="15"/></g>
+ <text x="51" y="826" fill="#788173" font-family="Arial" font-size="23" letter-spacing="9">AURA / CUSTOM BASE</text>
+</svg>

@@ -10,7 +10,7 @@ export async function POST(req:NextRequest){try{
  const product=(await db().ref(`products/${input.productId}`).get()).val() as Product|null;
  if(!product?.published)throw new Error('Товар недоступен');
  if(input.templateId){const template=(await db().ref(`designTemplates/${input.templateId}`).get()).val() as DesignTemplate|null;if(!template?.published||!template.compatibleProductIds.includes(product.id))throw new Error('Готовый принт недоступен')}
- if(!product.colors.some(c=>c.name===input.color)||!product.sizes.includes(input.size))throw new Error('Недоступный цвет или размер');
+ if(!(product.colors.some(c=>c.name===input.color)||/^#[0-9a-fA-F]{6}$/.test(input.color))||!product.sizes.includes(input.size))throw new Error('Недоступный цвет или размер');
  for(const layer of input.layers){
   if(!product.printAreas.some(a=>a.id===layer.areaId))throw new Error('Недоступная область печати');
   if(!validLayerBounds(layer))throw new Error('Слой выходит за область печати');

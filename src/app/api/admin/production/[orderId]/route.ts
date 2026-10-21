@@ -16,7 +16,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{orderId:stri
  const elements:string[]=[];
  for(const layer of layers){if(!validLayerBounds(layer))throw new Error('Слой выходит за пределы печати');
   const pxWidth=layer.width*width,pxHeight=layer.height*height,cx=(layer.x+layer.width/2)*width,cy=(layer.y+layer.height/2)*height;
-  const transform=`translate(${cx} ${cy}) rotate(${layer.rotation})`;
+  const transform=`translate(${cx} ${cy}) rotate(${layer.rotation}) ${layer.flipX?'scale(-1 1)':''}`;
   if(layer.kind==='image'){
    const asset=(await db().ref(`assets/${layer.image?.assetId}`).get()).val();if(!asset)throw new Error('Исходник отсутствует');
    if(asset.width<Math.ceil(pxWidth)||asset.height<Math.ceil(pxHeight))throw new Error(`Недостаточное разрешение: ${asset.name}. Нужно не менее ${Math.ceil(pxWidth)} × ${Math.ceil(pxHeight)} px`);

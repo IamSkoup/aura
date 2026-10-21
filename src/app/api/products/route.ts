@@ -3,10 +3,13 @@ import { db } from '@/lib/firebase-admin';
 import { fail, json } from '@/lib/server';
 import {withTimeout} from '@/lib/timeout';
 import type { Product } from '@/lib/types';
+import { starterProducts } from '@/lib/catalog-data';
 export const runtime='nodejs';
 export async function GET(req:NextRequest){try{
- const snap=await withTimeout(db().ref('products').get());
- let products=Object.values(snap.val()||{}) as Product[];
+ const dbUrl=process.env.FIREBASE_DATABASE_URL;
+ const snap=dbUrl&&!dbUrl.includes('your-project')?await withTimeout(db().ref('products').get(),4000).catch(()=>null):null;
+ let products=(snap ? Object.values(snap.val()||{}) : []) as Product[];
+ if(!products.length)products=starterProducts;
  products=products.filter(p=>p.published);const facets={colors:[...new Set(products.flatMap(p=>p.colors.map(c=>c.name)))],sizes:[...new Set(products.flatMap(p=>p.sizes))],materials:[...new Set(products.map(p=>p.material).filter(Boolean))]};
  const id=req.nextUrl.searchParams.get('id');if(id)products=products.filter(p=>p.id===id);
  const category=req.nextUrl.searchParams.get('category');if(category)products=products.filter(p=>p.category===category);

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="900" viewBox="0 0 800 900">
+ <defs><linearGradient id="c" x2="1" y2="1"><stop stop-color="#272b2a"/><stop offset=".65" stop-color="#131617"/><stop offset="1" stop-color="#333738"/></linearGradient></defs>
+ <rect width="800" height="900" fill="#e3e4df"/><rect x="250" y="111" width="313" height="605" rx="59" fill="#818781" opacity=".22"/>
+ <rect x="234" y="100" width="313" height="605" rx="58" fill="url(#c)" stroke="#444b43" stroke-width="8"/>
+ <rect x="249" y="118" width="284" height="569" rx="46" fill="#252929"/>
+ <rect x="266" y="134" width="108" height="150" rx="34" fill="#101313" stroke="#4d554e" stroke-width="5"/>
+ <circle cx="307" cy="176" r="24" fill="#58645d" stroke="#101313" stroke-width="8"/><circle cx="335" cy="233" r="22" fill="#4d5650" stroke="#101313" stroke-width="8"/>
+ <text x="50" y="832" fill="#8a9086" font-family="Arial" font-size="23" letter-spacing="9">AURA / CUSTOM BASE</text>
+</svg>

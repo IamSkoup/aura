@@ -10,7 +10,7 @@ export const runtime='nodejs';
 export async function GET(req:NextRequest){try{const u=await userFromRequest(req);const snap=await db().ref(`ordersByUser/${u.uid}`).get();const ids=Object.keys(snap.val()||{});const items=await Promise.all(ids.map(async id=>(await db().ref(`orders/${id}`).get()).val()));return json({items:items.filter(Boolean).sort((a:Order,b:Order)=>b.createdAt-a.createdAt)});}catch(e){return fail(e)}}
 export async function POST(req:NextRequest){try{
  const u=await userFromRequest(req);await rateLimit(u.uid,'checkout',5,60_000);if(!process.env.FIREBASE_DATABASE_EMULATOR_HOST){const settings=(await db().ref('settings/public').get()).val();if(settings?.legalReady!==true||settings?.merchantReady!==true||!settings?.merchantName||!settings?.privacyPolicy||!settings?.offer||!settings?.returnPolicy||!settings?.contactEmail)throw new Error('Приём реальных заказов ещё не открыт: нужны реквизиты и утверждённые документы')}if(!u.email_verified&&!process.env.FIREBASE_AUTH_EMULATOR_HOST)throw new Error('Подтвердите email перед заказом');
- const input=checkoutSchema.parse(await req.json());if(input.paymentMethod==='yookassa'&&process.env.PAYMENT_PROVIDER!=='yookassa')throw new Error('Онлайн-оплата не настроена');const lines:OrderLine[]=[];let subtotalRub=0;
+ const input=checkoutSchema.parse(await req.json());if(input.paymentMethod!=='yookassa'||process.env.PAYMENT_PROVIDER!=='yookassa')throw new Error('Онлайн-оплата пока не подключена');const lines:OrderLine[]=[];let subtotalRub=0;
  for(const line of input.lines){
   const product=(await db().ref(`products/${line.productId}`).get()).val() as Product|null;
   const design=(await db().ref(`userDesigns/${u.uid}/${line.designId}`).get()).val() as Design|null;

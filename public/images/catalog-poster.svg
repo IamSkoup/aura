@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="900" viewBox="0 0 800 900">
+ <rect width="800" height="900" fill="#e8e9e3"/><rect x="202" y="102" width="416" height="621" fill="#858c81" opacity=".26"/>
+ <rect x="184" y="83" width="416" height="621" fill="#f7f6ed"/><rect x="218" y="120" width="350" height="550" fill="#272f29"/>
+ <circle cx="410" cy="389" r="138" stroke="#c9ff48" stroke-width="2" fill="none"/><circle cx="410" cy="389" r="95" stroke="#bdce9c" stroke-width="1" fill="none"/>
+ <path d="M218 546 Q382 210 569 504 L569 670 L218 670" fill="#627245"/><path d="M218 580 L568 360 L568 670 L218 670" fill="#c9ff48"/>
+ <text x="48" y="834" fill="#7b8377" font-family="Arial" font-size="23" letter-spacing="9">AURA / CUSTOM BASE</text>
+</svg>
