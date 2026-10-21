@@ -6,6 +6,14 @@ import type { NextRequest } from 'next/server';
 function app() {
   if (getApps().length) return getApps()[0];
   if (!process.env.FIREBASE_DATABASE_URL) throw new Error('FIREBASE_DATABASE_URL не настроен');
+  // The Realtime Database WebSocket client ignores NO_PROXY. Local emulator traffic
+  // must bypass an inherited HTTP proxy or writes will hang indefinitely.
+  if (process.env.FIREBASE_DATABASE_EMULATOR_HOST) {
+    delete process.env.HTTP_PROXY;
+    delete process.env.HTTPS_PROXY;
+    delete process.env.http_proxy;
+    delete process.env.https_proxy;
+  }
   return initializeApp({ ...(process.env.FIREBASE_DATABASE_EMULATOR_HOST ? {} : {credential: applicationDefault()}), projectId: process.env.FIREBASE_PROJECT_ID, databaseURL: process.env.FIREBASE_DATABASE_URL });
 }
 export function db() { return getDatabase(app()); }

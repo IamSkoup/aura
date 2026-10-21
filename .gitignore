@@ -6,3 +6,4 @@ node_modules/
 .firebase/
 *.tsbuildinfo
 coverage/
+*-debug.log

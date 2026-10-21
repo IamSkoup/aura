@@ -1,19 +1,19 @@
 # Aura Wear
 
-Next.js-магазин кастомной одежды. Реализован первый сценарий с футболкой: Firebase Authentication → каталог Realtime Database → редактор слоёв и GLB/UV-предпросмотр → сохранение проекта → корзина → заказ → админская проверка и экспорт макета. Полный сквозной тест с Firebase пока не пройден. При отсутствии платёжных ключей заказ остаётся **неоплаченным**.
+Next.js-магазин кастомной одежды. Реализован первый сценарий с футболкой: Firebase Authentication → каталог Realtime Database → редактор слоёв и GLB/UV-предпросмотр → сохранение проекта → корзина → заказ → админская проверка и экспорт макета. Серверный сценарий от регистрации до экспорта макета проверен на локальных эмуляторах Firebase. При отсутствии платёжных ключей заказ остаётся **неоплаченным**.
 
 ## Быстрый запуск
 
 Требуются Node.js 20+, npm и Java 21 для Firebase Emulator Suite.
 
 ```bash
-cd /workspace/aura
-npm ci --cache /workspace/.npm
+git clone https://github.com/IamSkoup/aura.git
+cd aura
+npm ci
 cp .env.example .env.local
-npm run emulators   # отдельный терминал
-npm run seed        # только для эмулятора; создаёт тестовую футболку
-npm run dev
 ```
+
+В первом терминале запустите `npm run emulators`. Когда порты 9099 и 9000 будут готовы, во втором терминале выполните `npm run seed`, затем `npm run dev`. Тестовый каталог существует только в эмуляторе. Для Windows вместо `cp` используйте `copy` в cmd или `Copy-Item` в PowerShell.
 
 Откройте `http://localhost:3000`. Зарегистрируйте пользователя через `/login`. Для локальной проверки админки назначьте роль **из отдельного терминала**, затем войдите повторно:
 
@@ -37,10 +37,10 @@ npm run grant-admin -- admin@example.test
 
 ## Firebase и развёртывание
 
-1. В Firebase включите Authentication (email/password) и Realtime Database. Возьмите параметры веб-приложения из консоли и задайте переменные `NEXT_PUBLIC_FIREBASE_*` из `.env.example` на хостинге. Эти параметры публичны; серверные ключи там не размещайте.
+1. В проекте `aurawear-4be25` включите Authentication → Sign-in method → Email/Password и Realtime Database. В Authentication → Settings → Authorized domains проверьте, что добавлены `localhost` для местной разработки и ваш домен для публикации. Возьмите параметры веб-приложения из консоли и задайте переменные `NEXT_PUBLIC_FIREBASE_*` из `.env.example` на хостинге. Эти параметры публичны; серверные ключи там не размещайте.
    Для предоставленного проекта: `NEXT_PUBLIC_FIREBASE_PROJECT_ID=aurawear-4be25`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=aurawear-4be25.firebaseapp.com`, `NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://aurawear-4be25-default-rtdb.europe-west1.firebasedatabase.app`, `NEXT_PUBLIC_FIREBASE_APP_ID=1:318217753716:web:37bd05522aca881615ad21`. Публичный Web API key скопируйте из Firebase Console в `NEXT_PUBLIC_FIREBASE_API_KEY`. Переменные `*_EMULATOR_HOST` на хостинге не задавайте.
-2. Задайте `FIREBASE_PROJECT_ID` и `FIREBASE_DATABASE_URL` на сервере. Предоставьте Firebase Admin SDK доступ через workload identity или приватный файл учётной записи, на который указывает `GOOGLE_APPLICATION_CREDENTIALS`.
-3. Установите правила: `npx firebase deploy --only database --project <your-project-id>`. Перед деплоем проверьте выбор проекта и сделайте резервную копию существующих правил.
+2. Для запуска с настоящим Firebase создайте отдельный `.env.local` по образцу `.env.example`, замените локальные URL и ID на значения выше, задайте `FIREBASE_PROJECT_ID=aurawear-4be25` и `FIREBASE_DATABASE_URL` с HTTPS-адресом вашей Realtime Database. Удалите обе переменные `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST` и `FIREBASE_AUTH_EMULATOR_HOST`, а также обе переменные `*_DATABASE_EMULATOR_HOST`. Предоставьте Firebase Admin SDK доступ через workload identity или приватный файл учётной записи, на который указывает `GOOGLE_APPLICATION_CREDENTIALS`. Храните этот файл вне репозитория.
+3. После проверки и резервного копирования текущих правил установите новые: `npx firebase login`, затем `npx firebase deploy --only database --project aurawear-4be25`. Это меняет правила доступа существующей базы данных.
 4. Разместите Next.js на Node.js-хостинге с HTTPS, задайте `NEXT_PUBLIC_SITE_URL`, запустите `npm ci && npm run build && npm run start`. Нужны постоянные серверные функции для API и webhook. Статическое размещение не подходит.
 5. Создайте приватный S3-совместимый бакет и задайте `S3_BUCKET`, `S3_REGION`, необязательный `S3_ENDPOINT`, а также `S3_ACCESS_KEY_ID` и `S3_SECRET_ACCESS_KEY` только на сервере. В эмуляторе файлы пишутся в `.data/assets`; в production отсутствие S3 блокирует загрузку.
 
@@ -73,6 +73,6 @@ npm run grant-admin -- admin@example.test
 - Остальные изделия требуют подготовленных моделей с UV-развёрткой и собственных адаптеров печати. В интерфейсе для них показывается 2D-изображение; полноценный просмотр принта на изделии пока не реализован.
 - Нет бронирования остатков при одновременных заказах, расчёта доставки по тарифу перевозчика, применения промокодов, возвратов через платёжное API и переноса гостевой корзины в другой браузер. Эти функции нужны до коммерческого запуска.
 - Производственный PNG задаёт размер зоны и DPI, но текстовый рендерер экспорта использует серверный шрифт. Перед печатью нужен тестовый образец и сверка начертания, цветов и требований типографии.
-- Среда должна получить сетевой доступ к `storage.googleapis.com`, чтобы скачать Firebase Emulator Suite. Пока доступ закрыт, сквозной тест Firebase остаётся невыполненным.
+- Для первого запуска эмуляторов нужен сетевой доступ к `storage.googleapis.com`, откуда Firebase CLI скачивает исполняемый файл Realtime Database Emulator.
 
 Проверки: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. Полный поток Firebase проверяйте с запущенными эмуляторами и опубликованными правилами.
