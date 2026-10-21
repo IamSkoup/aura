@@ -43,7 +43,7 @@ export async function saveImage(file: File) {
 }
 
 export async function saveDesign(design: Design): Promise<void> {
-  const clean: Design = {...design, layers: design.layers.map(layer => layer.image ? {...layer, image: {...layer.image, url: ''}} : layer)};
+  const clean: Design = {...design, layers: design.layers.map(layer => layer.image && !layer.image.url.startsWith('data:image/svg+xml') ? {...layer, image: {...layer.image, url: ''}} : layer)};
   await transact('designs', 'readwrite', store => store.put(clean));
 }
 
@@ -52,6 +52,7 @@ export async function loadDesign(id: string): Promise<Design | null> {
   if (!design) return null;
   const layers = await Promise.all(design.layers.map(async layer => {
     if (!layer.image) return layer;
+    if (layer.image.url.startsWith('data:image/svg+xml')) return layer;
     const file = await transact<Blob | undefined>('assets', 'readonly', store => store.get(layer.image!.assetId));
     return file ? {...layer, image: {...layer.image, url: URL.createObjectURL(file)}} : layer;
   }));

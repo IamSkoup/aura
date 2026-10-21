@@ -6,11 +6,14 @@ export const assetUrl = (file: string) => `${import.meta.env.BASE_URL}${file.rep
 
 // Visual samples are never sold; the merchant must supply actual SKUs and specifications.
 const apparelColors = [
-  {name: 'Графит', hex: '#252525'}, {name: 'Молочный', hex: '#f5f1e9'},
+  {name: 'Молочный', hex: '#f5f1e9'}, {name: 'Графит', hex: '#252525'},
   {name: 'Лайм', hex: '#c9ff48'}, {name: 'Серо-бежевый', hex: '#a7a399'},
   {name: 'Тёмно-синий', hex: '#25334c'}, {name: 'Бургунди', hex: '#75434a'},
   {name: 'Лаванда', hex: '#b6a9c6'}, {name: 'Хвоя', hex: '#446457'},
   {name: 'Терракота', hex: '#b66d55'}, {name: 'Белый', hex: '#ffffff'},
+  {name: 'Чёрный', hex: '#111214'}, {name: 'Оливковый', hex: '#737963'},
+  {name: 'Небесный', hex: '#9bbcd0'}, {name: 'Песочный', hex: '#d2b896'},
+  {name: 'Кобальт', hex: '#364fa0'}, {name: 'Коралловый', hex: '#da8478'},
 ];
 const clothingAreas = [
   {id: 'front', label: 'Спереди', widthMm: 280, heightMm: 350, minDpi: 150, extraPriceRub: 0},

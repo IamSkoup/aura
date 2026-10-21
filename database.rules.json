@@ -9,7 +9,7 @@
     "userDesigns": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
     "users": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
     "ordersByUser": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
-    "reviews": { "$id": { ".read": "data.child('published').val() === true" } },
+    "reviews": { ".indexOn": ["published"], ".read": "query.orderByChild === 'published' && query.equalTo === true", "$id": { ".read": "data.child('published').val() === true" } },
     "settings": { "public": { ".read": true } }
   }
 }
