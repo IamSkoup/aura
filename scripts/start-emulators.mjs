@@ -10,7 +10,7 @@ mkdirSync(configDir,{recursive:true});
 mkdirSync(emulatorDir,{recursive:true});
 
 const cli=path.join(root,'node_modules','firebase-tools','lib','bin','firebase.js');
-const child=spawn(process.execPath,[cli,'emulators:start','--only','auth,database','--project','aura-wear-local',...process.argv.slice(2)],{
+const child=spawn(process.execPath,[cli,'emulators:start','--only','auth,database,storage','--project','aura-wear-local',...process.argv.slice(2)],{
   cwd:root,
   stdio:'inherit',
   env:{...process.env,XDG_CONFIG_HOME:configDir,FIREBASE_EMULATORS_PATH:emulatorDir,FIREBASE_TOOLS_DISABLE_UPDATE_CHECK:'true'},
