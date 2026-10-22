@@ -19,19 +19,19 @@ const clothingAreas = [
   {id: 'front', label: 'Спереди', widthMm: 280, heightMm: 350, minDpi: 150, extraPriceRub: 0},
   {id: 'back', label: 'Сзади', widthMm: 280, heightMm: 350, minDpi: 150, extraPriceRub: 0},
 ];
-const visualSample = (id: string, name: string, category: string, image: string, sizes: string[], colors = apparelColors): Product => ({
+const visualSample = (id: string, name: string, category: string, image: string, sizes: string[], priceRub: number, colors = apparelColors): Product => ({
   id, name, slug: id, category, image: assetUrl(`images/${image}`),
-  description: 'Визуальный образец. Материал, размеры и стоимость будут указаны после подтверждения поставщиком.',
-  priceRub: 0, colors, sizes, printAreas: id === 'demo-tee' ? clothingAreas : [], stock: 0, published: true, previewOnly: true, createdAt: 0,
+  description: 'Основа для собственного дизайна. Цвет и размер можно выбрать перед добавлением в корзину. Характеристики и окончательная цена уточняются.',
+  priceRub, colors, sizes, printAreas: id === 'demo-tee' ? clothingAreas : [], stock: 0, published: true, previewOnly: true, createdAt: 0,
 });
-export const demoTee: Product = {...visualSample('demo-tee', 'Футболка AURA', 'Футболки', 'tee-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL']), model: assetUrl('models/aura-tee.glb')};
+export const demoTee: Product = {...visualSample('demo-tee', 'Футболка AURA', 'Футболки', 'tee-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL'], 1990), model: assetUrl('models/aura-tee.glb')};
 export const demoProducts: Product[] = [
   demoTee,
-  visualSample('demo-hoodie', 'Худи AURA', 'Худи', 'hoodie-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL']),
-  visualSample('demo-sweatshirt', 'Свитшот AURA', 'Свитшоты', 'sweatshirt-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL']),
-  visualSample('demo-mug', 'Кружка AURA', 'Кружки', 'mug-editorial.webp', ['Объём уточняется'], [{name: 'Молочный', hex: '#f5f1e9'}]),
-  visualSample('demo-case', 'Чехол AURA', 'Чехлы', 'case-editorial.webp', ['Модель уточняется'], [{name: 'Молочный', hex: '#f5f1e9'}]),
-  visualSample('demo-poster', 'Постер AURA', 'Постеры', 'poster-editorial.webp', ['Формат уточняется'], [{name: 'Молочный', hex: '#f5f1e9'}]),
+  visualSample('demo-hoodie', 'Худи AURA', 'Худи', 'hoodie-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL'], 3990),
+  visualSample('demo-sweatshirt', 'Свитшот AURA', 'Свитшоты', 'sweatshirt-editorial.webp', ['XS', 'S', 'M', 'L', 'XL', 'XXL'], 3490),
+  visualSample('demo-mug', 'Кружка AURA', 'Кружки', 'mug-editorial.webp', ['Объём уточняется'], 790, [{name: 'Молочный', hex: '#f5f1e9'}]),
+  visualSample('demo-case', 'Чехол AURA', 'Чехлы', 'case-editorial.webp', ['Модель уточняется'], 990, [{name: 'Молочный', hex: '#f5f1e9'}]),
+  visualSample('demo-poster', 'Постер AURA', 'Постеры', 'poster-editorial.webp', ['Формат уточняется'], 890, [{name: 'Молочный', hex: '#f5f1e9'}]),
 ];
 
 export function staticImage(url: string): string | null {
@@ -49,9 +49,9 @@ export async function loadCatalog(): Promise<{products: Product[]; notice: strin
     const products = usable.map(p => ({...p, image: staticImage(p.image)!, model: p.model ? staticImage(p.model) || undefined : undefined}));
     return {
       products: [...products, ...demoProducts.filter(sample => !products.some(p => p.id === sample.id))],
-      notice: usable.length === published.length ? '' : 'Часть товаров скрыта: их фотографии доступны только через серверное API.',
+      notice: usable.length === published.length ? '' : 'Часть товаров пока недоступна для просмотра.',
     };
   } catch {
-    return {products: demoProducts, notice: 'Каталог продавца пока недоступен. Ниже показаны визуальные образцы.'};
+    return {products: demoProducts, notice: ''};
   }
 }

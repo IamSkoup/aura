@@ -4,22 +4,32 @@ cloth=bpy.data.materials.new('Graphite cotton'); cloth.diffuse_color=(0.11,0.11,
 cloth.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(0.11,0.11,0.11,1)
 cloth.node_tree.nodes.get('Principled BSDF').inputs['Roughness'].default_value=.92
 seam=bpy.data.materials.new('Seams'); seam.diffuse_color=(0.075,0.075,0.075,1)
+def torso_width(t):
+    # A relaxed tee: slightly flared hem, drawn-in waist, broad but sloped shoulders.
+    return .65 + .13*math.exp(-((t-.77)/.25)**2) + .10*math.exp(-((t-.02)/.18)**2) + .11*math.exp(-((t-1.0)/.14)**2)
+
+def shoulder_y(x, front):
+    neck=.20 if front else .11
+    a=abs(x)
+    if a < .43: return 1.06-neck*(1-(a/.43)**2)
+    return 1.06-.105*min(1,(a-.43)/.37)
+
 def panel(name, front):
-    verts=[]; uv=[]; faces=[]; w=.88; bottom=-1.24; top=1.06; nx=48; ny=56
+    verts=[]; faces=[]; bottom=-1.24; top=1.06; nx=56; ny=72
     for j in range(ny+1):
         row_y=bottom+(top-bottom)*j/ny
         t=j/ny
-        width=.73 + .10*math.sin(math.pi*t*.9) + .025*t
+        width=torso_width(t)
         for i in range(nx+1):
             x=(-1+2*i/nx)*width
-            y=row_y
-            if j==ny and abs(x)<.43: y=top-(.20 if front else .10)*(1-(x/.43)**2)
-            bulge=(1-(x/max(width,.01))**2)*(.045+.045*math.sin(math.pi*t))
-            vertical=.035*math.sin(13*x+2.4*t)*(1-t)**2
-            cross=.025*math.sin(8*math.pi*t+8*abs(x))*math.exp(-((abs(x)-.58)/.25)**2)*math.exp(-((t-.57)/.34)**2)
-            soft=.018*math.sin(7*x-11*t)*math.sin(math.pi*t)
+            y=bottom+(shoulder_y(x,front)-bottom)*t
+            if j==0: y+=.022*math.cos(x*8)+.012*math.cos(x*16)
+            bulge=(1-(x/max(width,.01))**2)*(.045+.055*math.sin(math.pi*t))
+            vertical=.045*math.sin(13*x+2.4*t)*(1-t)**2
+            cross=.047*math.sin(8*math.pi*t+8*abs(x))*math.exp(-((abs(x)-.58)/.25)**2)*math.exp(-((t-.57)/.34)**2)
+            soft=.022*math.sin(7*x-11*t)*math.sin(math.pi*t)
             fold=vertical+cross+soft
-            z=(.18+bulge+fold) if front else (-.17-bulge-fold)
+            z=(.18+bulge+fold+.025*math.sin(5*x+1.7*t)*(1-t)) if front else (-.17-bulge-fold)
             verts.append((x,y,z))
     for j in range(ny):
       for i in range(nx):
@@ -39,7 +49,8 @@ panel('Front_Print_Surface',True); panel('Back_Print_Surface',False)
 for sign in [-1,1]:
     verts=[]; faces=[]; ny=56
     for j in range(ny+1):
-        t=j/ny; y=-1.24+2.30*t; width=.73+.10*math.sin(math.pi*t*.9)+.025*t
+        t=j/ny; width=torso_width(t)
+        y=-1.24+(shoulder_y(sign*width,True)+1.24)*t
         verts.extend([(sign*width,y,.18),(sign*width,y,-.17)])
     for j in range(ny):
         a=j*2; faces.append((a,a+1,a+3,a+2))
@@ -51,11 +62,11 @@ for sign,label in [(-1,'Left'),(1,'Right')]:
     verts=[]; faces=[]; rings=12; sides=16
     for j in range(rings+1):
         t=j/rings
-        cx=sign*(.78+.48*t); cy=.80-.30*t
-        ry=.215-.018*t; rz=.19-.025*t
+        cx=sign*(.76+.50*t); cy=.80-.27*t
+        ry=.225-.052*t; rz=.185-.015*t
         for i in range(sides):
             a=2*math.pi*i/sides
-            x=cx+sign*.025*math.cos(a)*math.sin(math.pi*t)
+            x=cx+sign*.042*math.cos(a)*math.sin(math.pi*t)
             y=cy+ry*math.cos(a)
             z=rz*math.sin(a)+.012*math.sin(5*t+3*a)
             verts.append((x,y,z))
@@ -76,15 +87,15 @@ def curve(name, points, radius, mat):
     sp=cu.splines.new('POLY');sp.points.add(len(points)-1)
     for p,xyz in zip(sp.points,points):p.co=(*xyz,1)
     ob=bpy.data.objects.new(name,cu);bpy.context.collection.objects.link(ob);ob.data.materials.append(mat)
-curve('Collar_front',[(.43*math.cos(a),1.06-.20*math.sin(a),.24) for a in [i*math.pi/24 for i in range(25)]],.035,seam)
-curve('Collar_back',[(.43*math.cos(a),1.06-.10*math.sin(a),-.22) for a in [i*math.pi/24 for i in range(25)]],.026,seam)
+curve('Collar_front',[(.43*math.cos(a),1.06-.20*math.sin(a),.24) for a in [i*math.pi/32 for i in range(33)]],.026,seam)
+curve('Collar_back',[(.43*math.cos(a),1.06-.11*math.sin(a),-.22) for a in [i*math.pi/32 for i in range(33)]],.023,seam)
 # bottom and sleeve hems
 for z in [.19,-.18]:
- curve('Bottom_hem',[(x,-1.19,z) for x in [-.73,-.36,0,.36,.73]],.009,seam)
+ curve('Bottom_hem',[(x,-1.19+.022*math.cos(x*8)+.012*math.cos(x*16),z) for x in [-.73,-.55,-.36,-.18,0,.18,.36,.55,.73]],.007,seam)
 curve('Left_cuff_hem',left_cuff,.008,seam)
 curve('Right_cuff_hem',right_cuff,.008,seam)
 for sign in [-1,1]:
- curve('Shoulder_stitch',[(sign*(.43+.35*t/12),1.055-.035*t/12,.23) for t in range(13)],.006,seam)
+ curve('Shoulder_stitch',[(sign*(.43+.36*t/16),1.055-.105*t/16,.23) for t in range(17)],.005,seam)
 model_objects=list(bpy.context.scene.objects)
 for obj in model_objects: obj.rotation_euler[0]=math.pi/2
 bpy.ops.export_scene.gltf(filepath=os.path.abspath('public/models/aura-tee.glb'),export_format='GLB',use_selection=False,export_apply=True)
