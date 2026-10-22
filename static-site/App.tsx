@@ -56,7 +56,7 @@ export default function App() {
       <nav className={menuOpen ? 'aw-nav open' : 'aw-nav'} aria-label="Главное меню"><Link to="/catalog">Каталог</Link><Link to="/studio">Конструктор</Link><Link to="/prints">Готовые дизайны</Link><Link to="/reviews">Отзывы</Link><Link to="/designs">Мои проекты</Link><Link className="aw-mobile-login" to="/login">{user ? 'Личный кабинет' : 'Войти'}</Link></nav>
       <div className="aw-header-actions"><ThemeChoice/><Link to="/login" aria-label="Личный кабинет">{user ? user.email?.split('@')[0] : 'Войти'}</Link><Link className="aw-bag" to="/cart" aria-label={`Корзина, ${count} товаров`}><ShoppingBag size={20}/>{count > 0 && <b>{count}</b>}</Link><button className="aw-menu-button" onClick={() => setMenuOpen(value => !value)} aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}>{menuOpen ? <X/> : <Menu/>}</button></div>
     </div></header>
-    <nav className="aw-mobile-quicknav" aria-label="Быстрые ссылки"><Link to="/catalog">Каталог</Link><Link to="/studio">Конструктор</Link><Link to="/reviews">Отзывы</Link></nav>
+    {path === '/' && <nav className="aw-mobile-quicknav" aria-label="Быстрые ссылки"><Link to="/catalog">Каталог</Link><Link to="/studio">Конструктор</Link><Link to="/reviews">Отзывы</Link></nav>}
     <main id="main">
       {path === '/' ? <Home/> :
        path === '/catalog' ? <Catalog products={products} notice={catalogNotice} initialCategory={params.get('category') || 'Все'}/> :

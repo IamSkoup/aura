@@ -123,16 +123,19 @@ export function Editor({product, designId, navigate}: {product: Product; designI
   return <div className="aw-editor">
     <div className="aw-editor-main">
       <div className="aw-3d-stage" ref={stage}>
-        <div className="aw-stage-caption"><span>3D / ПРЕДПРОСМОТР</span><span>ВРАЩАЙ · ПРИБЛИЖАЙ</span></div>
-        {isShirtModel ? <Suspense fallback={<div className="aw-stage-loading">Загружаем 3D…</div>}>
-          <StaticShirt3D key={cameraKey} layers={design.layers} color={color} side={side} autoRotate={autoRotate}/>
-        </Suspense> : <div className="aw-fallback"><img src={product.image || assetUrl('images/tee-editorial.webp')} alt={product.name}/><p>Для этого изделия 3D-модель пока не подключена.</p></div>}
+        <div className="aw-stage-display">
+          <div className="aw-stage-caption"><span>3D / ПРЕДПРОСМОТР</span><span>ВРАЩАЙ · ПРИБЛИЖАЙ</span></div>
+          {isShirtModel ? <Suspense fallback={<div className="aw-stage-loading">Загружаем 3D…</div>}>
+            <StaticShirt3D key={cameraKey} layers={design.layers} color={color} side={side} autoRotate={autoRotate}/>
+          </Suspense> : <div className="aw-fallback"><img src={product.image || assetUrl('images/tee-editorial.webp')} alt={product.name}/><p>Для этого изделия 3D-модель пока не подключена.</p></div>}
+        </div>
         <div className="aw-stage-controls">
           <button onClick={() => setSide('front')} className={side === 'front' ? 'active' : ''}>Спереди</button>
           <button onClick={() => setSide('back')} className={side === 'back' ? 'active' : ''}>Сзади</button>
-          {isShirtModel && <><button onClick={() => setAutoRotate(value => !value)} className={autoRotate ? 'active' : ''}>Автовращение</button>
-            <button onClick={() => setCameraKey(value => value + 1)} aria-label="Сбросить камеру"><RotateCcw size={16}/></button>
-            <button onClick={downloadPreview} aria-label="Скачать предпросмотр"><Download size={16}/></button></>}
+          {isShirtModel && <><button className={`aw-desktop-stage-control${autoRotate ? ' active' : ''}`} onClick={() => setAutoRotate(value => !value)}>Автовращение</button>
+            <button className="aw-desktop-stage-control" onClick={() => setCameraKey(value => value + 1)} aria-label="Сбросить камеру"><RotateCcw size={16}/></button>
+            <button className="aw-desktop-stage-control" onClick={downloadPreview} aria-label="Скачать предпросмотр"><Download size={16}/></button>
+            <details className="aw-stage-more"><summary>Ещё</summary><div><button onClick={event => {setAutoRotate(value => !value); event.currentTarget.closest('details')?.removeAttribute('open');}}>{autoRotate ? 'Остановить вращение' : 'Включить вращение'}</button><button onClick={event => {setCameraKey(value => value + 1); event.currentTarget.closest('details')?.removeAttribute('open');}}>Сбросить камеру</button><button onClick={event => {downloadPreview(); event.currentTarget.closest('details')?.removeAttribute('open');}}>Скачать изображение</button></div></details></>}
         </div>
       </div>
       <section className="aw-workboard"><div className="aw-workboard-head"><div><span className="eyebrow">РЕДАКТОР ПРИНТА</span><h2>{area.label}</h2></div><span>Демо-зона {area.widthMm} × {area.heightMm} мм</span></div>
@@ -153,9 +156,9 @@ export function Editor({product, designId, navigate}: {product: Product; designI
       </section>
     </div>
     <aside className="aw-editor-sidebar"><div className="aw-sidebar-scroll">
-      <span className="eyebrow">AURA STUDIO / ДЕМО</span><h1>Сделай своим<span>.</span></h1>
-      <p>Это локальный макет. Он не отправляется в производство.</p>
-      <section className="aw-tool-section"><h2><span>01</span> Изделие</h2><strong>{product.name}</strong><label>Цвет</label><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}</div><small>{design.color}</small><label>Свой оттенок<input type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label>
+      <span className="eyebrow">AURA STUDIO / КОНСТРУКТОР</span><h1>Сделай своим<span>.</span></h1>
+      <p>Выбери цвет и размер, затем добавь принт. Макет сохранится в этом браузере.</p>
+      <section className="aw-tool-section"><h2><span>01</span> Изделие</h2><strong>{product.name}</strong><label>Цвет</label><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}</div><small className="aw-palette-hint">{design.color}<span> · Листай палитру →</span></small><label>Свой оттенок<input type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label>
         <label htmlFor="aw-size">{product.optionLabel || 'Размер'}</label><select id="aw-size" value={design.size} onChange={event => design.setOption('size', event.target.value)}>{product.sizes.map(size => <option key={size}>{size}</option>)}</select></section>
       <section className="aw-tool-section"><h2><span>02</span> Область</h2><div className="aw-segment">{product.printAreas.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => {setActive(item.id); setSide(item.id === 'back' ? 'back' : 'front'); setSelected(null);}}>{item.label}</button>)}</div></section>
       <section className="aw-tool-section"><h2><span>03</span> Твой дизайн</h2><div className="aw-add-actions"><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Загрузить изображение</button><button onClick={addText}><Type size={17}/> Добавить надпись</button><button onClick={() => setPainting(value => !value)}><Brush size={17}/> {painting ? 'Закрыть кисть' : 'Рисовать'}</button></div><input ref={fileInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = '';}}/><small>PNG, JPG, WebP · до 8 МБ · только в вашем браузере</small></section>
