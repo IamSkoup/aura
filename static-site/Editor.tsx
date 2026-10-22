@@ -3,17 +3,19 @@ import {ArrowDown, ArrowUp, Download, ImagePlus, Redo2, RotateCcw, Save, Shoppin
 import type {Design, Layer, Product} from '@/lib/types';
 import {money} from '@/lib/types';
 import {validLayerBounds} from '@/lib/bounds';
+import {editorFontFamily} from '@/lib/fonts';
 import {PaintTool} from './PaintTool';
 import {useDesign} from '@/store/design';
 import {useCart} from '@/store/cart';
-import {loadDesign, saveDesign, saveImage} from './local-data';
+import {loadDesign, saveDesign, saveImage, SignInRequiredError} from './local-data';
 import {assetUrl} from './catalog';
 
 const StaticShirt3D = lazy(() => import('./StaticShirt3D'));
+const TEXT_COLORS = ['#151515', '#ffffff', '#c9ff48', '#e76d59', '#5577d1', '#9b78be', '#da9841', '#287e6b'];
 
 function createdDesign(product: Product, state: ReturnType<typeof useDesign.getState>): Design {
   const now = Date.now();
-  return {id: state.id || crypto.randomUUID(), ownerId: 'local-browser', productId: product.id,
+  return {id: state.id || crypto.randomUUID(), ownerId: '', productId: product.id,
     color: state.color, size: state.size, layers: state.layers, title: state.title.trim() || 'Мой дизайн',
     isPublic: false, createdAt: now, updatedAt: now};
 }
@@ -27,6 +29,7 @@ export function Editor({product, designId, navigate}: {product: Product; designI
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraKey, setCameraKey] = useState(0);
   const [message, setMessage] = useState('');
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [painting, setPainting] = useState(false);
   const [loadedId, setLoadedId] = useState('');
@@ -38,11 +41,11 @@ export function Editor({product, designId, navigate}: {product: Product; designI
   useEffect(() => {
     if (designId && loadedId !== designId) {
       void loadDesign(designId).then(saved => {
-        if (!saved) throw new Error('Проект не найден в этом браузере.');
+        if (!saved) throw new Error('Проект не найден в вашем аккаунте.');
         useDesign.getState().load(saved);
         setActive(saved.layers[0]?.areaId || 'front');
         setLoadedId(designId);
-      }).catch(error => setMessage((error as Error).message));
+      }).catch(error => {setNeedsLogin(error instanceof SignInRequiredError); setMessage((error as Error).message);});
     } else if (!designId && (useDesign.getState().productId !== product.id || loadedId)) {
       useDesign.getState().setProduct(product.id, product.colors[0]?.name || 'Графит', product.sizes.includes('M') ? 'M' : product.sizes[0] || 'M');
       setLoadedId('');
@@ -71,9 +74,10 @@ export function Editor({product, designId, navigate}: {product: Product; designI
       }
       await saveDesign(record);
       state.setId(record.id);
-      setMessage('Проект сохранён в этом браузере. Для надёжности скачайте предпросмотр; очистка данных браузера удалит проект.');
+      setNeedsLogin(false);
+      setMessage('Проект сохранён в вашем аккаунте. Его можно открыть на другом устройстве после входа.');
       return record.id;
-    } catch (error) {setMessage(`Не удалось сохранить проект: ${(error as Error).message}`); return null;}
+    } catch (error) {setNeedsLogin(error instanceof SignInRequiredError); setMessage((error as Error).message); return null;}
     finally {setBusy(false);}
   }
 
@@ -84,7 +88,7 @@ export function Editor({product, designId, navigate}: {product: Product; designI
       const width = paint ? 1 : .4, height = paint ? 1 : Math.min(.7, width * image.height / image.width);
       design.addLayer({id: crypto.randomUUID(), kind: 'image', areaId: active, x: paint ? 0 : .3, y: paint ? 0 : .28, width, height, isPaint: paint,
         rotation: 0, opacity: 1, image});
-      setMessage('Изображение добавлено. Оригинал хранится только в этом браузере.');
+      setMessage('Изображение добавлено. Сохраните проект, чтобы открыть его в своём аккаунте.');
     } catch (error) {setMessage((error as Error).message);}
     finally {setBusy(false);}
   }
@@ -96,6 +100,14 @@ export function Editor({product, designId, navigate}: {product: Product; designI
       rotation: 0, opacity: 1, text: 'ТВОЙ ТЕКСТ', font: 'Manrope', color: ['#252525','#25334c','#75434a','#446457'].includes(color.toLowerCase()) ? '#ffffff' : '#151515',
       fontSize: 32, letterSpacing: 0, weight: 700, align: 'center'});
     setSelected(id);
+  }
+
+  function resizeText(layer: Layer, requestedSize: number, text = layer.text || '') {
+    if (!Number.isFinite(requestedSize)) return;
+    const fontSize = Math.max(1, Math.min(200, requestedSize));
+    const lines = Math.max(1, Math.min(10, text.split('\n').length));
+    const height = Math.min(.95, Math.max(.12, fontSize * .0029 * lines));
+    design.updateLayer(layer.id, {text, fontSize, height, y: Math.min(layer.y, 1 - height)});
   }
 
   function showWorkboard() {
@@ -158,7 +170,7 @@ export function Editor({product, designId, navigate}: {product: Product; designI
             style={{left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.width * 100}%`, height: `${layer.height * 100}%`, transform: `rotate(${layer.rotation}deg) scale(${layer.flipX ? -1 : 1}, ${layer.flipY ? -1 : 1})`, opacity: layer.opacity}}
             onPointerDown={event => {event.currentTarget.setPointerCapture(event.pointerId); design.checkpoint(); setSelected(layer.id); drag.current = {id: layer.id, clientX: event.clientX, clientY: event.clientY, x: layer.x, y: layer.y};}}
             onKeyDown={event => {if (!event.key.startsWith('Arrow')) return; event.preventDefault(); const step = event.shiftKey ? .05 : .01; design.updateLayer(layer.id, {x: Math.max(0, Math.min(1 - layer.width, layer.x + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0))), y: Math.max(0, Math.min(1 - layer.height, layer.y + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0)))}); setSelected(layer.id);}}>
-            {layer.kind === 'image' ? layer.image?.url ? <img src={layer.image.url} alt={layer.image.name} draggable={false}/> : <span>Изображение недоступно</span> : <span style={{fontFamily: layer.font || 'Manrope', fontWeight: layer.weight, fontStyle: layer.italic ? 'italic' : 'normal', fontSize: `${Math.max(12, (layer.fontSize || 30) * .48)}px`, color: layer.color, textAlign: layer.align || 'center', letterSpacing: layer.letterSpacing, whiteSpace: 'pre-wrap'}}>{layer.text}</span>}
+            {layer.kind === 'image' ? layer.image?.url ? <img src={layer.image.url} alt={layer.image.name} draggable={false}/> : <span>Изображение недоступно</span> : <span style={{fontFamily: editorFontFamily(layer.font), fontWeight: layer.weight, fontStyle: layer.italic ? 'italic' : 'normal', fontSize: `${Math.max(12, (layer.fontSize || 30) * .48)}px`, color: layer.color, textAlign: layer.align || 'center', letterSpacing: layer.letterSpacing, whiteSpace: 'pre-wrap'}}>{layer.text}</span>}
           </div>)}
           <span className="aw-zone-mark">PRINT AREA / {active.toUpperCase()}</span>
         </div></div>
@@ -168,15 +180,17 @@ export function Editor({product, designId, navigate}: {product: Product; designI
     </div>
     <aside className="aw-editor-sidebar"><div className="aw-sidebar-scroll">
       <span className="eyebrow">AURA STUDIO / КОНСТРУКТОР</span><h1>Сделай своим<span>.</span></h1>
-      <p>Выбери цвет и размер, затем добавь принт. Макет сохранится в этом браузере.</p>
+      <p>Выбери цвет и размер, затем добавь принт. Войди в аккаунт, чтобы сохранить результат.</p>
       <section className="aw-tool-section aw-product-settings"><h2><span>01</span> Изделие</h2><strong>{product.name}</strong><label>Цвет</label><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}</div><small className="aw-palette-hint">{design.color}<span> · Листай палитру →</span></small><label>Свой оттенок<input type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label>
         <label htmlFor="aw-size">{product.optionLabel || 'Размер'}</label><select id="aw-size" value={design.size} onChange={event => design.setOption('size', event.target.value)}>{product.sizes.map(size => <option key={size}>{size}</option>)}</select></section>
       <section className="aw-tool-section aw-zone-settings"><h2><span>02</span> Область</h2><div className="aw-segment">{product.printAreas.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => {setActive(item.id); setSide(item.id === 'back' ? 'back' : 'front'); setSelected(null);}}>{item.label}</button>)}</div></section>
-      <section className="aw-tool-section aw-design-actions"><h2><span>03</span> Твой дизайн</h2><div className="aw-add-actions"><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Загрузить изображение</button><button disabled={busy} onClick={addText}><Type size={17}/> Добавить надпись</button><button disabled={busy} onClick={() => setPainting(value => !value)}><Brush size={17}/> {painting ? 'Закрыть кисть' : 'Рисовать'}</button></div><small>PNG, JPG, WebP · до 8 МБ · только в вашем браузере</small></section>
+      <section className="aw-tool-section aw-design-actions"><h2><span>03</span> Твой дизайн</h2><div className="aw-add-actions"><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Загрузить изображение</button><button disabled={busy} onClick={addText}><Type size={17}/> Добавить надпись</button><button disabled={busy} onClick={() => setPainting(value => !value)}><Brush size={17}/> {painting ? 'Закрыть кисть' : 'Рисовать'}</button></div><small>PNG, JPG, WebP · до 8 МБ · изображения уменьшаются для предпросмотра</small></section>
       <section className="aw-tool-section"><div className="aw-tool-heading"><h2><span>04</span> Слои</h2><div><button aria-label="Отменить" disabled={!design.past.length} onClick={design.undo}><Undo2 size={16}/></button><button aria-label="Повторить" disabled={!design.future.length} onClick={design.redo}><Redo2 size={16}/></button></div></div>
         {design.layers.length ? <div className="aw-layer-list">{design.layers.map((layer, index) => <div key={layer.id} className={selected === layer.id ? 'active' : ''}><button onClick={() => {setSelected(layer.id); setActive(layer.areaId);}}>{layer.kind === 'image' ? <ImagePlus size={15}/> : <Type size={15}/>} <span>{layer.kind === 'image' ? layer.image?.name : layer.text}</span></button><button aria-label="Слой выше" disabled={index === design.layers.length - 1} onClick={() => design.moveLayer(layer.id, 1)}><ArrowUp size={14}/></button><button aria-label="Слой ниже" disabled={index === 0} onClick={() => design.moveLayer(layer.id, -1)}><ArrowDown size={14}/></button><button aria-label="Удалить слой" onClick={() => {design.removeLayer(layer.id); setSelected(null);}}><Trash2 size={14}/></button></div>)}</div> : <p>Добавьте изображение или надпись.</p>}
         {selectedLayer && <div className="aw-properties"><strong>Настройки слоя</strong>
-          {selectedLayer.kind === 'text' && <><label>Текст<textarea value={selectedLayer.text || ''} onChange={event => design.updateLayer(selectedLayer.id, {text: event.target.value})}/></label><div className="aw-two"><label>Шрифт<select value={selectedLayer.font || 'Manrope'} onChange={event => design.updateLayer(selectedLayer.id, {font: event.target.value})}><option>Manrope</option><option>IBM Plex Sans</option><option>Rubik</option><option>Unbounded</option><option>Noto Serif</option><option>Oswald</option></select></label><label>Цвет<input type="color" value={selectedLayer.color || '#151515'} onChange={event => design.updateLayer(selectedLayer.id, {color: event.target.value})}/></label></div><div className="aw-two"><label>Размер<input type="number" min="12" max="96" value={selectedLayer.fontSize || 32} onChange={event => design.updateLayer(selectedLayer.id, {fontSize: Number(event.target.value)})}/></label><label>Интервал<input type="number" min="-2" max="12" value={selectedLayer.letterSpacing || 0} onChange={event => design.updateLayer(selectedLayer.id, {letterSpacing: Number(event.target.value)})}/></label></div><div className="aw-two"><label>Толщина<select value={selectedLayer.weight || 700} onChange={event => design.updateLayer(selectedLayer.id, {weight: Number(event.target.value)})}><option value="400">Обычная</option><option value="600">Средняя</option><option value="700">Жирная</option></select></label><label>Выравнивание<select value={selectedLayer.align || 'center'} onChange={event => design.updateLayer(selectedLayer.id, {align: event.target.value as Layer['align']})}><option value="left">Слева</option><option value="center">Центр</option><option value="right">Справа</option></select></label></div><label className="aw-check"><input type="checkbox" checked={!!selectedLayer.italic} onChange={event => design.updateLayer(selectedLayer.id, {italic: event.target.checked})}/> Курсив</label></>}
+          {selectedLayer.kind === 'text' && <><label>Текст<textarea maxLength={500} value={selectedLayer.text || ''} onChange={event => resizeText(selectedLayer, selectedLayer.fontSize || 32, event.target.value)}/></label><label>Шрифт<select value={selectedLayer.font || 'Manrope'} onChange={event => design.updateLayer(selectedLayer.id, {font: event.target.value})}><option>Manrope</option><option>IBM Plex Sans</option><option>Rubik</option><option>Unbounded</option><option>Noto Serif</option><option>Oswald</option></select></label>
+            <fieldset className="aw-text-colors"><legend>Цвет текста <span>{selectedLayer.color || '#151515'}</span></legend><div className="aw-text-swatches">{TEXT_COLORS.map(swatch => <button key={swatch} type="button" style={{backgroundColor: swatch}} className={selectedLayer.color?.toLowerCase() === swatch ? 'active' : ''} aria-label={`Цвет текста ${swatch}`} aria-pressed={selectedLayer.color?.toLowerCase() === swatch} onClick={() => design.updateLayer(selectedLayer.id, {color: swatch})}/>)}</div><label>Свой цвет<input type="color" aria-label="Свой цвет текста" value={selectedLayer.color || '#151515'} onChange={event => design.updateLayer(selectedLayer.id, {color: event.target.value})}/></label></fieldset>
+            <label className="aw-text-size">Размер текста · {selectedLayer.fontSize ?? 32}<input type="range" aria-label="Размер текста, ползунок" min="12" max="200" value={Math.max(12, selectedLayer.fontSize || 32)} onChange={event => resizeText(selectedLayer, Number(event.target.value))}/></label><div className="aw-two"><label>Размер числом<input type="number" min="12" max="200" value={selectedLayer.fontSize ?? 32} onChange={event => resizeText(selectedLayer, Number(event.target.value))} onBlur={event => resizeText(selectedLayer, Math.max(12, Number(event.target.value) || 12))}/></label><label>Интервал<input type="number" min="-2" max="12" value={selectedLayer.letterSpacing || 0} onChange={event => design.updateLayer(selectedLayer.id, {letterSpacing: Number(event.target.value)})}/></label></div><div className="aw-two"><label>Толщина<select value={selectedLayer.weight || 700} onChange={event => design.updateLayer(selectedLayer.id, {weight: Number(event.target.value)})}><option value="400">Обычная</option><option value="600">Средняя</option><option value="700">Жирная</option></select></label><label>Выравнивание<select value={selectedLayer.align || 'center'} onChange={event => design.updateLayer(selectedLayer.id, {align: event.target.value as Layer['align']})}><option value="left">Слева</option><option value="center">Центр</option><option value="right">Справа</option></select></label></div><label className="aw-check"><input type="checkbox" checked={!!selectedLayer.italic} onChange={event => design.updateLayer(selectedLayer.id, {italic: event.target.checked})}/> Курсив</label></>}
           <label>Масштаб<input type="range" min=".05" max=".9" step=".01" value={selectedLayer.width} onChange={event => {const width = Number(event.target.value), ratio = selectedLayer.height / selectedLayer.width; design.updateLayer(selectedLayer.id, {width, height: Math.min(.9, width * ratio), x: Math.min(selectedLayer.x, 1 - width)});}}/></label>
           <label>Поворот · {selectedLayer.rotation}°<input type="range" min="-180" max="180" value={selectedLayer.rotation} onChange={event => design.updateLayer(selectedLayer.id, {rotation: Number(event.target.value)})}/></label><div className="aw-two"><label>Угол, °<input type="number" min="-180" max="180" value={selectedLayer.rotation} onChange={event => design.updateLayer(selectedLayer.id, {rotation: Math.max(-180, Math.min(180, Number(event.target.value)))})}/></label><button type="button" onClick={() => design.updateLayer(selectedLayer.id, {rotation: 0})}>Сбросить угол</button></div><div className="aw-property-actions"><button onClick={() => {const id = crypto.randomUUID(); design.addLayer({...selectedLayer, id, x: Math.min(.9, selectedLayer.x + .05), y: Math.min(.9, selectedLayer.y + .05)}); setSelected(id);}}><Copy size={14}/> Дублировать</button><button onClick={() => design.updateLayer(selectedLayer.id, {flipX: !selectedLayer.flipX})}><FlipHorizontal size={14}/> Отразить X</button><button onClick={() => design.updateLayer(selectedLayer.id, {flipY: !selectedLayer.flipY})}><FlipVertical size={14}/> Отразить Y</button><button onClick={() => design.updateLayer(selectedLayer.id, {x: (1 - selectedLayer.width) / 2, y: (1 - selectedLayer.height) / 2})}>По центру</button></div>
           <label>Прозрачность · {Math.round(selectedLayer.opacity * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedLayer.opacity} onChange={event => design.updateLayer(selectedLayer.id, {opacity: Number(event.target.value)})}/></label>
@@ -184,6 +198,6 @@ export function Editor({product, designId, navigate}: {product: Product; designI
         </div>}
       </section>
       <section className="aw-tool-section"><h2><span>05</span> Проект</h2><label htmlFor="aw-title">Название</label><input id="aw-title" value={design.title} onChange={event => design.setOption('title', event.target.value)}/><button className="aw-reset" onClick={() => {if (window.confirm('Удалить все слои проекта?')) design.reset();}}><Trash2 size={15}/> Сбросить дизайн</button></section>
-    </div><div className="aw-editor-footer"><div><span>{product.previewOnly ? 'Пример цены' : 'Стоимость'}</span><strong>{money(estimate)}</strong></div><small>Итоговая цена и доставка уточняются при оформлении.</small>{message && <p role="status" className="aw-message">{message}</p>}<button className="button button-dark full" disabled={busy} onClick={() => void save()}><Save size={17}/> Сохранить проект</button><button className="button button-lime full" disabled={busy} onClick={() => void (async () => {const id = await save(); if (id) {cart.add({designId: id, productId: product.id, quantity: 1}); navigate('/cart');}})()}><ShoppingBag size={17}/> Добавить в корзину</button></div></aside>
+    </div><div className="aw-editor-footer"><div><span>{product.previewOnly ? 'Пример цены' : 'Стоимость'}</span><strong>{money(estimate)}</strong></div><small>Итоговая цена и доставка уточняются при оформлении.</small>{message && <p role="status" className="aw-message">{message}</p>}{needsLogin && <a className="aw-login-link" href="#/login">Войти или зарегистрироваться →</a>}<button className="button button-dark full" disabled={busy} onClick={() => void save()}><Save size={17}/> Сохранить проект</button><button className="button button-lime full" disabled={busy} onClick={() => void (async () => {const id = await save(); if (id) {cart.add({designId: id, productId: product.id, quantity: 1}); navigate('/cart');}})()}><ShoppingBag size={17}/> Добавить в корзину</button></div></aside>
   </div>;
 }

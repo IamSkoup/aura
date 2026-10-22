@@ -3,6 +3,7 @@ import {ContactShadows, OrbitControls, useGLTF} from '@react-three/drei';
 import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import type {Layer} from '@/lib/types';
+import {editorFontFamily} from '@/lib/fonts';
 import {assetUrl} from './catalog';
 
 function usePrintTexture(layers: Layer[], areaId: string, hex: string) {
@@ -47,13 +48,16 @@ function usePrintTexture(layers: Layer[], areaId: string, hex: string) {
           ctx.fillStyle = layer.color || '#151515';
           ctx.textAlign = layer.align || 'center';
           ctx.textBaseline = 'middle';
-          const fontSize = Math.max(16, (layer.fontSize || 30) * 2);
-          const font = layer.font || 'Manrope';
-          try {await document.fonts.load(`${layer.weight || 600} ${fontSize}px \"${font}\"`);} catch {}
-          ctx.font = `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${fontSize}px \"${font}\"`;
+          const requestedSize = Math.max(16, (layer.fontSize || 30) * 2);
+          const font = editorFontFamily(layer.font);
+          try {await document.fonts.load(`${layer.weight || 600} ${requestedSize}px \"${font}\"`);} catch {}
+          ctx.font = `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${requestedSize}px \"${font}\"`;
           ctx.letterSpacing = `${layer.letterSpacing || 0}px`;
           const lines = (layer.text || '').split('\n').slice(0, 10);
-          lines.forEach((line, i) => ctx.fillText(line, layer.align === 'left' ? -w / 2 : layer.align === 'right' ? w / 2 : 0, (i - (lines.length - 1) / 2) * fontSize * 1.15, w));
+          const measured = Math.max(1, ...lines.map(line => ctx.measureText(line).width));
+          const fontSize = Math.min(requestedSize, requestedSize * w / measured, h / (Math.max(1, lines.length) * 1.15));
+          ctx.font = `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${fontSize}px \"${font}\"`;
+          lines.forEach((line, i) => ctx.fillText(line, layer.align === 'left' ? -w / 2 : layer.align === 'right' ? w / 2 : 0, (i - (lines.length - 1) / 2) * fontSize * 1.15));
         }
         ctx.restore();
       }

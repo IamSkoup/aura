@@ -1,29 +1,47 @@
+import {get, getDatabase, ref, remove, set} from 'firebase/database';
 import type {Design} from '@/lib/types';
+import {firebaseApp, firebaseAuth} from './firebase';
+import {clearLegacyData, legacyAsset, legacyDesigns} from './legacy-data';
 
-const DB_NAME = 'aura-pages';
+const db = getDatabase(firebaseApp);
+const MAX_IMAGE_CHARS = 700_000;
+const MAX_PROJECT_BYTES = 3_500_000;
 
-function database(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('designs')) db.createObjectStore('designs', {keyPath: 'id'});
-      if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets');
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+export class SignInRequiredError extends Error {
+  constructor() {super('Чтобы сохранить или открыть дизайн, войдите в аккаунт.');}
 }
 
-async function transact<T>(storeName: 'designs'|'assets', mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  const db = await database();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, mode);
-    const request = operation(tx.objectStore(storeName));
-    tx.oncomplete = () => {resolve(request.result); db.close();};
-    tx.onerror = () => {reject(tx.error); db.close();};
-    tx.onabort = () => {reject(tx.error); db.close();};
-  });
+async function currentUser() {
+  await firebaseAuth.authStateReady();
+  const user = firebaseAuth.currentUser;
+  if (!user) throw new SignInRequiredError();
+  return user;
+}
+
+function designRef(uid: string, id?: string) {
+  return ref(db, `userDesigns/${uid}${id ? `/${id}` : ''}`);
+}
+
+async function compactImage(blob: Blob, name: string) {
+  const bitmap = await createImageBitmap(blob).catch(() => {throw new Error('Файл изображения повреждён.');});
+  try {
+    if (bitmap.width < 100 || bitmap.height < 100 || bitmap.width * bitmap.height > 40_000_000) throw new Error('Размер изображения: от 100 × 100 px, до 40 млн пикселей.');
+    for (const maxSide of [1800, 1500, 1200, 960]) {
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d')?.drawImage(bitmap, 0, 0, width, height);
+      for (const quality of [.82, .7, .58]) {
+        const url = canvas.toDataURL('image/webp', quality);
+        if (url.startsWith('data:image/webp;base64,') && url.length <= MAX_IMAGE_CHARS) {
+          return {assetId: crypto.randomUUID(), url, width, height, name: name.slice(0, 120)};
+        }
+      }
+    }
+    throw new Error('Не удалось подготовить фото для сохранения. Выберите изображение меньшего размера.');
+  } finally {bitmap.close();}
 }
 
 export async function saveImage(file: File) {
@@ -33,37 +51,73 @@ export async function saveImage(file: File) {
   const jpg = header[0] === 255 && header[1] === 216 && header[2] === 255;
   const webp = String.fromCharCode(...header.slice(0, 4)) === 'RIFF' && String.fromCharCode(...header.slice(8, 12)) === 'WEBP';
   if (!png && !jpg && !webp) throw new Error('Поддерживаются только PNG, JPG и WebP.');
-  const bitmap = await createImageBitmap(file).catch(() => {throw new Error('Файл изображения повреждён.');});
-  const {width, height} = bitmap;
-  bitmap.close();
-  if (width < 100 || height < 100 || width * height > 40_000_000) throw new Error('Размер изображения: от 100 × 100 px, до 40 млн пикселей.');
-  const assetId = crypto.randomUUID();
-  await transact('assets', 'readwrite', store => store.put(file, assetId));
-  return {assetId, url: URL.createObjectURL(file), width, height, name: file.name.slice(0, 120)};
+  return compactImage(file, file.name);
+}
+
+function cleanDesign(design: Design, uid: string): Design {
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(design.id)) throw new Error('Некорректный ID дизайна.');
+  if (design.layers.length > 16) throw new Error('В одном проекте можно сохранить до 16 слоёв.');
+  const clean = JSON.parse(JSON.stringify({...design, ownerId: uid, isPublic: false})) as Design;
+  if (clean.previewUrl && clean.previewUrl.length > 140_000) delete clean.previewUrl;
+  for (const layer of clean.layers) {
+    if (layer.image && !/^(data:image\/(webp|svg\+xml)[;,])/.test(layer.image.url)) throw new Error('Изображение слоя нужно загрузить заново.');
+    if (layer.image && layer.image.url.length > MAX_IMAGE_CHARS) throw new Error('Один из рисунков слишком большой для сохранения.');
+  }
+  if (new Blob([JSON.stringify(clean)]).size > MAX_PROJECT_BYTES) throw new Error('Проект слишком большой для облачного сохранения. Удалите часть изображений.');
+  return clean;
+}
+
+async function migrateLegacy(uid: string) {
+  const old = await legacyDesigns();
+  if (!old.length) return;
+  for (const design of old) {
+    if ((await get(designRef(uid, design.id))).exists()) continue;
+    const layers = await Promise.all(design.layers.map(async layer => {
+      if (!layer.image || layer.image.url.startsWith('data:image/svg+xml')) return layer;
+      const file = await legacyAsset(layer.image.assetId);
+      if (!file) throw new Error('Один из старых проектов содержит недоступное изображение. Данные в браузере сохранены.');
+      return {...layer, image: await compactImage(file, layer.image.name)};
+    }));
+    await set(designRef(uid, design.id), cleanDesign({...design, layers}, uid));
+  }
+  await clearLegacyData();
+}
+
+let migration: {uid: string; promise: Promise<void>} | null = null;
+function ensureMigration(uid: string) {
+  if (migration?.uid === uid) return migration.promise;
+  const promise = migrateLegacy(uid).catch(error => {migration = null; throw error;});
+  migration = {uid, promise};
+  return promise;
 }
 
 export async function saveDesign(design: Design): Promise<void> {
-  const clean: Design = {...design, layers: design.layers.map(layer => layer.image && !layer.image.url.startsWith('data:image/svg+xml') ? {...layer, image: {...layer.image, url: ''}} : layer)};
-  await transact('designs', 'readwrite', store => store.put(clean));
+  const user = await currentUser();
+  await set(designRef(user.uid, design.id), cleanDesign(design, user.uid));
 }
 
 export async function loadDesign(id: string): Promise<Design | null> {
-  const design = await transact<Design | undefined>('designs', 'readonly', store => store.get(id));
-  if (!design) return null;
-  const layers = await Promise.all(design.layers.map(async layer => {
-    if (!layer.image) return layer;
-    if (layer.image.url.startsWith('data:image/svg+xml')) return layer;
-    const file = await transact<Blob | undefined>('assets', 'readonly', store => store.get(layer.image!.assetId));
-    return file ? {...layer, image: {...layer.image, url: URL.createObjectURL(file)}} : layer;
-  }));
-  return {...design, layers};
+  const user = await currentUser();
+  await ensureMigration(user.uid);
+  const snapshot = await get(designRef(user.uid, id));
+  if (!snapshot.exists()) return null;
+  const design = snapshot.val() as Design;
+  if (design.ownerId !== user.uid) return null;
+  return {...design, layers: Array.isArray(design.layers) ? design.layers : []};
 }
 
 export async function listDesigns(): Promise<Design[]> {
-  const designs = await transact<Design[]>('designs', 'readonly', store => store.getAll());
-  return designs.sort((a, b) => b.updatedAt - a.updatedAt);
+  const user = await currentUser();
+  await ensureMigration(user.uid);
+  const snapshot = await get(designRef(user.uid));
+  if (!snapshot.exists()) return [];
+  return Object.values(snapshot.val() as Record<string, Design>)
+    .filter(item => item?.ownerId === user.uid)
+    .map(item => ({...item, layers: Array.isArray(item.layers) ? item.layers : []}))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function deleteDesign(id: string): Promise<void> {
-  await transact('designs', 'readwrite', store => store.delete(id));
+  const user = await currentUser();
+  await remove(designRef(user.uid, id));
 }

@@ -4,7 +4,7 @@
 html[data-theme=dark]{
   --page:#10110f;--panel:#1c1d1a;--panel-alt:#292b27;--text:#f5f4ef;--subtext:#b7b9af;--border:#42453f;--accent:#c9ff48;--button-bg:#c9ff48;--button-text:#151515;
 }
-body{background:var(--page)!important;background-image:none!important;color:var(--text);font-family:Manrope,Arial,sans-serif}
+body{background:var(--page)!important;background-image:none!important;color:var(--text);font-family:'Manrope Variable',Arial,sans-serif}
 button,a,input,select,textarea{transition:background-color .2s,color .2s,border-color .2s,transform .2s}
 button:not(:disabled):hover{filter:brightness(1.08)}
 :where(a,button,input,select,textarea,[role=button]):focus-visible{outline:3px solid var(--accent)!important;outline-offset:3px}
@@ -206,6 +206,8 @@ html[data-theme=light] .aw-art-bottom{color:#33392e}
 .aw-payment-error strong{font-size:18px}
 .aw-payment-error p{line-height:1.6;font-size:13px}
 .aw-payment-error a{font-weight:800;color:var(--text);text-decoration:underline;text-underline-offset:3px}
+.aw-login-link{display:inline-flex;align-items:center;min-height:36px;margin:8px 0;color:var(--text);font-size:13px;font-weight:850;text-decoration:underline;text-underline-offset:4px}
+.aw-login-link:hover{color:var(--accent)}
 .aw-sample-reviews{padding:70px 0 26px}
 .aw-sample-head{display:flex;justify-content:space-between;align-items:end;gap:40px;margin-bottom:25px}
 .aw-sample-head h2{font-size:clamp(38px,5vw,66px);letter-spacing:-.065em;line-height:1;margin:14px 0 0}
@@ -412,6 +414,24 @@ html[data-theme=light] .aw-workboard{background-image:linear-gradient(115deg,#e9
 .paint-tip{line-height:1.55;max-width:580px}
 .brush-toolbar input[type=color]{width:46px;height:42px;min-width:46px;border:1px solid var(--border);background:var(--panel);padding:4px}
 .brush-toolbar input[type=range]{accent-color:var(--accent)}
+.aw-editor-sidebar .aw-property-actions button,.aw-editor-sidebar .aw-properties .aw-two>button,.aw-editor-sidebar .aw-tool-heading button,.aw-editor-sidebar .aw-layer-list button{
+ background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important;opacity:1;
+}
+.aw-editor-sidebar .aw-property-actions button:hover,.aw-editor-sidebar .aw-properties .aw-two>button:hover,.aw-editor-sidebar .aw-tool-heading button:not(:disabled):hover,.aw-editor-sidebar .aw-layer-list button:not(:disabled):hover{background:var(--accent)!important;color:#151515!important;border-color:var(--accent)!important}
+.aw-editor-sidebar .aw-tool-heading button:disabled,.aw-editor-sidebar .aw-layer-list button:disabled{color:var(--subtext)!important;opacity:.55}
+.aw-editor-sidebar .aw-property-actions button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:36px;border-radius:3px;font-weight:800;font-size:11px}
+.aw-editor-sidebar .aw-properties .aw-two>button{min-height:45px;border-radius:3px;font-size:11px;font-weight:800}
+.aw-editor-sidebar .aw-layer-list>div.active button{background:var(--accent)!important;color:#151515!important;border-color:#8aaa26!important}
+.aw-editor-sidebar .aw-properties input[type=range]{background:transparent!important;accent-color:var(--accent)!important}
+.aw-text-colors{border:1px solid var(--border);padding:12px;margin:17px 0 0;min-width:0}
+.aw-text-colors legend{padding:0 5px;color:var(--text);font-size:11px;font-weight:850}
+.aw-text-colors legend span{color:var(--subtext);font-weight:700;text-transform:uppercase;margin-left:7px}
+.aw-text-swatches{display:flex;flex-wrap:wrap;gap:8px;margin:5px 0 8px}
+.aw-text-swatches button{width:31px;height:31px;min-width:31px;border:2px solid var(--border);border-radius:50%;box-shadow:0 0 0 1px #15151555;cursor:pointer}
+.aw-text-swatches button.active{outline:3px solid var(--accent);outline-offset:2px}
+.aw-text-colors label{margin-top:11px}
+.aw-text-colors input[type=color]{width:100%;height:45px;min-height:45px;padding:4px;cursor:pointer}
+.aw-text-size{margin-top:18px!important}
 @media(max-width:800px){
  .aw-mobile-editor-quick{display:block;order:2;width:100%;padding:18px max(16px,5vw) 20px;background:var(--panel);border-bottom:1px solid var(--border)}
  .aw-mobile-editor-product{display:flex;justify-content:space-between;align-items:end;gap:18px}

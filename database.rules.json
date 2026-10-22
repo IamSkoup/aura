@@ -6,7 +6,22 @@
     "categories": { ".read": true },
     "designTemplates": { ".indexOn": ["published"], ".read": "query.orderByChild === 'published' && query.equalTo === true", "$id": { ".read": "data.child('published').val() === true" } },
     "publicDesigns": { "$id": { ".read": true } },
-    "userDesigns": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
+    "userDesigns": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$designId": {
+          ".validate": "newData.hasChildren(['id','ownerId','productId','color','size','title','createdAt','updatedAt']) && newData.child('id').val() === $designId && newData.child('ownerId').val() === $uid && newData.child('productId').isString() && newData.child('productId').val().length <= 120 && newData.child('color').isString() && newData.child('color').val().length <= 80 && newData.child('size').isString() && newData.child('size').val().length <= 80 && newData.child('title').isString() && newData.child('title').val().length <= 120 && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && (!newData.child('previewUrl').exists() || (newData.child('previewUrl').isString() && newData.child('previewUrl').val().length <= 140000))",
+          "layers": {
+            "$layer": {
+              ".validate": "newData.hasChildren(['id','kind','areaId','x','y','width','height','rotation','opacity']) && newData.child('id').isString() && newData.child('id').val().length <= 80 && newData.child('areaId').isString() && newData.child('areaId').val().length <= 80 && (newData.child('kind').val() === 'text' || newData.child('kind').val() === 'image') && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1 && newData.child('width').isNumber() && newData.child('width').val() > 0 && newData.child('width').val() <= 1 && newData.child('height').isNumber() && newData.child('height').val() > 0 && newData.child('height').val() <= 1 && newData.child('rotation').isNumber() && newData.child('rotation').val() >= -180 && newData.child('rotation').val() <= 180 && newData.child('opacity').isNumber() && newData.child('opacity').val() >= 0 && newData.child('opacity').val() <= 1",
+              "text": { ".validate": "newData.isString() && newData.val().length <= 500" },
+              "image": { "url": { ".validate": "newData.isString() && newData.val().length <= 700000" } }
+            }
+          }
+        }
+      }
+    },
     "users": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
     "ordersByUser": { "$uid": { ".read": "auth != null && auth.uid === $uid" } },
     "reviews": { ".indexOn": ["published"], ".read": "query.orderByChild === 'published' && query.equalTo === true", "$id": { ".read": "data.child('published').val() === true" } },
