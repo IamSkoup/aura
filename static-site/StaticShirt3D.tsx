@@ -50,13 +50,34 @@ function usePrintTexture(layers: Layer[], areaId: string, hex: string) {
           ctx.textBaseline = 'middle';
           const requestedSize = Math.max(16, (layer.fontSize || 30) * 2);
           const font = editorFontFamily(layer.font);
-          try {await document.fonts.load(`${layer.weight || 600} ${requestedSize}px \"${font}\"`);} catch {}
-          ctx.font = `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${requestedSize}px \"${font}\"`;
+          const fontSpec = (size: number) => `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${size}px \"${font}\"`;
+          ctx.font = fontSpec(requestedSize);
           ctx.letterSpacing = `${layer.letterSpacing || 0}px`;
-          const lines = (layer.text || '').split('\n').slice(0, 10);
-          const measured = Math.max(1, ...lines.map(line => ctx.measureText(line).width));
-          const fontSize = Math.min(requestedSize, requestedSize * w / measured, h / (Math.max(1, lines.length) * 1.15));
-          ctx.font = `${layer.italic ? 'italic ' : ''}${layer.weight || 600} ${fontSize}px \"${font}\"`;
+          const paragraphs = (layer.text || '').split('\n').slice(0, 10);
+          const words = paragraphs.flatMap(line => line.trim().split(/\s+/).filter(Boolean));
+          const widestWord = Math.max(1, ...words.map(word => ctx.measureText(word).width));
+          let fontSize = Math.min(requestedSize, requestedSize * w / widestWord);
+          let lines: string[] = [];
+          for (let attempt = 0; attempt < 4; attempt++) {
+            ctx.font = fontSpec(fontSize);
+            lines = paragraphs.flatMap(paragraph => {
+              const parts = paragraph.trim().split(/\s+/).filter(Boolean);
+              if (!parts.length) return [''];
+              const wrapped: string[] = [];
+              let current = parts[0];
+              for (const word of parts.slice(1)) {
+                const next = `${current} ${word}`;
+                if (ctx.measureText(next).width <= w) current = next;
+                else {wrapped.push(current); current = word;}
+              }
+              wrapped.push(current);
+              return wrapped;
+            });
+            const heightLimit = h / (Math.max(1, lines.length) * 1.15);
+            if (heightLimit >= fontSize) break;
+            fontSize = heightLimit;
+          }
+          ctx.font = fontSpec(fontSize);
           lines.forEach((line, i) => ctx.fillText(line, layer.align === 'left' ? -w / 2 : layer.align === 'right' ? w / 2 : 0, (i - (lines.length - 1) / 2) * fontSize * 1.15));
         }
         ctx.restore();
@@ -64,6 +85,9 @@ function usePrintTexture(layers: Layer[], areaId: string, hex: string) {
       if (active) texture.needsUpdate = true;
     }
     void draw();
+    const fonts = layers.filter(layer => layer.areaId === areaId && layer.kind === 'text').map(layer =>
+      document.fonts.load(`${layer.weight || 600} ${Math.max(16, (layer.fontSize || 30) * 2)}px \"${editorFontFamily(layer.font)}\"`).catch(() => []));
+    if (fonts.length) void Promise.all(fonts).then(() => {if (active) void draw();});
     return () => {active = false;};
   }, [layers, areaId, hex, texture]);
   useEffect(() => () => texture.dispose(), [texture]);

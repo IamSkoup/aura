@@ -33,10 +33,22 @@ export function Editor({product, designId, navigate}: {product: Product; designI
   const [busy, setBusy] = useState(false);
   const [painting, setPainting] = useState(false);
   const [loadedId, setLoadedId] = useState('');
+  const [zoneWidth, setZoneWidth] = useState(390);
   const zone = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const drag = useRef<{id: string; clientX: number; clientY: number; x: number; y: number} | null>(null);
+
+  useEffect(() => {
+    if (!zone.current) return;
+    const target = zone.current;
+    const measure = () => setZoneWidth(target.getBoundingClientRect().width);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (designId && loadedId !== designId) {
@@ -106,8 +118,13 @@ export function Editor({product, designId, navigate}: {product: Product; designI
     if (!Number.isFinite(requestedSize)) return;
     const fontSize = Math.max(1, Math.min(200, requestedSize));
     const lines = Math.max(1, Math.min(10, text.split('\n').length));
-    const height = Math.min(.95, Math.max(.12, fontSize * .0029 * lines));
-    design.updateLayer(layer.id, {text, fontSize, height, y: Math.min(layer.y, 1 - height)});
+    const width = Math.max(layer.width, Math.min(.96, .64 + Math.max(0, fontSize - 32) * .002));
+    const height = Math.min(.95, Math.max(.12, fontSize * .0032 * lines));
+    const centerX = layer.x + layer.width / 2;
+    const centerY = layer.y + layer.height / 2;
+    const x = Math.max(0, Math.min(1 - width, centerX - width / 2));
+    const y = Math.max(0, Math.min(1 - height, centerY - height / 2));
+    design.updateLayer(layer.id, {text, fontSize, width, height, x, y});
   }
 
   function showWorkboard() {
@@ -170,7 +187,7 @@ export function Editor({product, designId, navigate}: {product: Product; designI
             style={{left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.width * 100}%`, height: `${layer.height * 100}%`, transform: `rotate(${layer.rotation}deg) scale(${layer.flipX ? -1 : 1}, ${layer.flipY ? -1 : 1})`, opacity: layer.opacity}}
             onPointerDown={event => {event.currentTarget.setPointerCapture(event.pointerId); design.checkpoint(); setSelected(layer.id); drag.current = {id: layer.id, clientX: event.clientX, clientY: event.clientY, x: layer.x, y: layer.y};}}
             onKeyDown={event => {if (!event.key.startsWith('Arrow')) return; event.preventDefault(); const step = event.shiftKey ? .05 : .01; design.updateLayer(layer.id, {x: Math.max(0, Math.min(1 - layer.width, layer.x + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0))), y: Math.max(0, Math.min(1 - layer.height, layer.y + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0)))}); setSelected(layer.id);}}>
-            {layer.kind === 'image' ? layer.image?.url ? <img src={layer.image.url} alt={layer.image.name} draggable={false}/> : <span>Изображение недоступно</span> : <span style={{fontFamily: editorFontFamily(layer.font), fontWeight: layer.weight, fontStyle: layer.italic ? 'italic' : 'normal', fontSize: `${Math.max(12, (layer.fontSize || 30) * .48)}px`, color: layer.color, textAlign: layer.align || 'center', letterSpacing: layer.letterSpacing, whiteSpace: 'pre-wrap'}}>{layer.text}</span>}
+            {layer.kind === 'image' ? layer.image?.url ? <img src={layer.image.url} alt={layer.image.name} draggable={false}/> : <span>Изображение недоступно</span> : <span style={{fontFamily: editorFontFamily(layer.font), fontWeight: layer.weight, fontStyle: layer.italic ? 'italic' : 'normal', fontSize: `${Math.max(12, (layer.fontSize || 30) * .48 * zoneWidth / 390)}px`, color: layer.color, textAlign: layer.align || 'center', letterSpacing: layer.letterSpacing, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.05}}>{layer.text}</span>}
           </div>)}
           <span className="aw-zone-mark">PRINT AREA / {active.toUpperCase()}</span>
         </div></div>

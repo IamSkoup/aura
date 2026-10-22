@@ -209,6 +209,7 @@ html[data-theme=light] .aw-art-bottom{color:#33392e}
 .aw-login-link{display:inline-flex;align-items:center;min-height:36px;margin:8px 0;color:var(--text);font-size:13px;font-weight:850;text-decoration:underline;text-underline-offset:4px}
 .aw-login-link:hover{color:var(--accent)}
 .aw-sample-reviews{padding:70px 0 26px}
+.aw-sample-reviews.aw-no-heading{padding-top:0}
 .aw-sample-head{display:flex;justify-content:space-between;align-items:end;gap:40px;margin-bottom:25px}
 .aw-sample-head h2{font-size:clamp(38px,5vw,66px);letter-spacing:-.065em;line-height:1;margin:14px 0 0}
 .aw-sample-head h2 em{color:var(--accent);font-style:normal}
@@ -222,6 +223,7 @@ html[data-theme=light] .aw-art-bottom{color:#33392e}
 .aw-sample-person span{color:#8eb419;letter-spacing:.11em;font-size:14px}
 html[data-theme=dark] .aw-sample-person span{color:#c9ff48}
 .aw-sample-card blockquote{margin:22px 0 0;color:var(--text);font-size:14px;line-height:1.7}
+.aw-sample-card>small{display:block;margin-top:17px;color:var(--subtext);font-size:10px}
 .aw-review-links{display:flex;gap:12px;padding-bottom:80px}
 .aw-review-links a{display:inline-flex;align-items:center;gap:12px;border:1px solid var(--border);padding:12px 17px;color:var(--text);font-size:12px;font-weight:800}
 .aw-review-links a:hover{background:var(--accent);color:#151515}
