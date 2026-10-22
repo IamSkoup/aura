@@ -97,6 +97,10 @@ export function Editor({product, designId, navigate}: {product: Product; designI
     setSelected(id);
   }
 
+  function showWorkboard() {
+    window.requestAnimationFrame(() => document.querySelector('.aw-workboard')?.scrollIntoView({behavior: 'smooth', block: 'start'}));
+  }
+
   function pointerMove(event: React.PointerEvent) {
     if (!drag.current || !zone.current) return;
     const layer = useDesign.getState().layers.find(item => item.id === drag.current?.id);
@@ -121,6 +125,7 @@ export function Editor({product, designId, navigate}: {product: Product; designI
   if (!area) return <div className="container aw-page"><p role="alert">Для товара не настроена печатная область.</p></div>;
 
   return <div className="aw-editor">
+    <input ref={fileInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = '';}}/>
     <div className="aw-editor-main">
       <div className="aw-3d-stage" ref={stage}>
         <div className="aw-stage-display">
@@ -130,14 +135,19 @@ export function Editor({product, designId, navigate}: {product: Product; designI
           </Suspense> : <div className="aw-fallback"><img src={product.image || assetUrl('images/tee-editorial.webp')} alt={product.name}/><p>Для этого изделия 3D-модель пока не подключена.</p></div>}
         </div>
         <div className="aw-stage-controls">
-          <button onClick={() => setSide('front')} className={side === 'front' ? 'active' : ''}>Спереди</button>
-          <button onClick={() => setSide('back')} className={side === 'back' ? 'active' : ''}>Сзади</button>
+          <button onClick={() => {setSide('front'); setActive('front'); setSelected(null);}} className={side === 'front' ? 'active' : ''}>Спереди</button>
+          <button onClick={() => {setSide('back'); if (product.printAreas.some(item => item.id === 'back')) {setActive('back'); setSelected(null);}}} className={side === 'back' ? 'active' : ''}>Сзади</button>
           {isShirtModel && <><button className={`aw-desktop-stage-control${autoRotate ? ' active' : ''}`} onClick={() => setAutoRotate(value => !value)}>Автовращение</button>
             <button className="aw-desktop-stage-control" onClick={() => setCameraKey(value => value + 1)} aria-label="Сбросить камеру"><RotateCcw size={16}/></button>
             <button className="aw-desktop-stage-control" onClick={downloadPreview} aria-label="Скачать предпросмотр"><Download size={16}/></button>
             <details className="aw-stage-more"><summary>Ещё</summary><div><button onClick={event => {setAutoRotate(value => !value); event.currentTarget.closest('details')?.removeAttribute('open');}}>{autoRotate ? 'Остановить вращение' : 'Включить вращение'}</button><button onClick={event => {setCameraKey(value => value + 1); event.currentTarget.closest('details')?.removeAttribute('open');}}>Сбросить камеру</button><button onClick={event => {downloadPreview(); event.currentTarget.closest('details')?.removeAttribute('open');}}>Скачать изображение</button></div></details></>}
         </div>
       </div>
+      <section className="aw-mobile-editor-quick" aria-label="Основные инструменты конструктора">
+        <div className="aw-mobile-editor-product"><div><span className="eyebrow">01 / ИЗДЕЛИЕ</span><strong>{product.name}</strong></div><label htmlFor="aw-mobile-size">Размер<select id="aw-mobile-size" value={design.size} onChange={event => design.setOption('size', event.target.value)}>{product.sizes.map(size => <option key={size}>{size}</option>)}</select></label></div>
+        <div className="aw-mobile-editor-colors"><span>Цвет <strong>{design.color}</strong></span><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}<label title="Свой оттенок"><input aria-label="Свой оттенок" type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label></div></div>
+        <div className="aw-mobile-editor-tools"><span className="eyebrow">02 / ДОБАВЬ ДИЗАЙН</span><div><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Фото</button><button onClick={() => {addText(); showWorkboard();}}><Type size={17}/> Текст</button><button onClick={() => {setPainting(value => !value); if (!painting) showWorkboard();}}><Brush size={17}/> Рисовать</button></div></div>
+      </section>
       <section className="aw-workboard"><div className="aw-workboard-head"><div><span className="eyebrow">РЕДАКТОР ПРИНТА</span><h2>{area.label}</h2></div><span>Демо-зона {area.widthMm} × {area.heightMm} мм</span></div>
         <p>Перемещайте слои в пределах печатной области. Стрелки на клавиатуре также передвигают выбранный слой.</p>
         <div className="aw-board-shell"><div className="aw-print-zone" ref={zone} style={{background: color}} onPointerMove={pointerMove} onPointerUp={() => drag.current = null} onPointerCancel={() => drag.current = null}>
@@ -158,10 +168,10 @@ export function Editor({product, designId, navigate}: {product: Product; designI
     <aside className="aw-editor-sidebar"><div className="aw-sidebar-scroll">
       <span className="eyebrow">AURA STUDIO / КОНСТРУКТОР</span><h1>Сделай своим<span>.</span></h1>
       <p>Выбери цвет и размер, затем добавь принт. Макет сохранится в этом браузере.</p>
-      <section className="aw-tool-section"><h2><span>01</span> Изделие</h2><strong>{product.name}</strong><label>Цвет</label><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}</div><small className="aw-palette-hint">{design.color}<span> · Листай палитру →</span></small><label>Свой оттенок<input type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label>
+      <section className="aw-tool-section aw-product-settings"><h2><span>01</span> Изделие</h2><strong>{product.name}</strong><label>Цвет</label><div className="aw-swatches">{product.colors.map(item => <button key={item.name} className={design.color === item.name ? 'active' : ''} style={{background: item.hex}} aria-label={item.name} title={item.name} onClick={() => design.setOption('color', item.name)}/>)}</div><small className="aw-palette-hint">{design.color}<span> · Листай палитру →</span></small><label>Свой оттенок<input type="color" value={color} onChange={event => design.setOption('color', event.target.value)}/></label>
         <label htmlFor="aw-size">{product.optionLabel || 'Размер'}</label><select id="aw-size" value={design.size} onChange={event => design.setOption('size', event.target.value)}>{product.sizes.map(size => <option key={size}>{size}</option>)}</select></section>
-      <section className="aw-tool-section"><h2><span>02</span> Область</h2><div className="aw-segment">{product.printAreas.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => {setActive(item.id); setSide(item.id === 'back' ? 'back' : 'front'); setSelected(null);}}>{item.label}</button>)}</div></section>
-      <section className="aw-tool-section"><h2><span>03</span> Твой дизайн</h2><div className="aw-add-actions"><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Загрузить изображение</button><button onClick={addText}><Type size={17}/> Добавить надпись</button><button onClick={() => setPainting(value => !value)}><Brush size={17}/> {painting ? 'Закрыть кисть' : 'Рисовать'}</button></div><input ref={fileInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {if (event.target.files?.[0]) void upload(event.target.files[0]); event.target.value = '';}}/><small>PNG, JPG, WebP · до 8 МБ · только в вашем браузере</small></section>
+      <section className="aw-tool-section aw-zone-settings"><h2><span>02</span> Область</h2><div className="aw-segment">{product.printAreas.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => {setActive(item.id); setSide(item.id === 'back' ? 'back' : 'front'); setSelected(null);}}>{item.label}</button>)}</div></section>
+      <section className="aw-tool-section aw-design-actions"><h2><span>03</span> Твой дизайн</h2><div className="aw-add-actions"><button onClick={() => fileInput.current?.click()} disabled={busy}><ImagePlus size={17}/> Загрузить изображение</button><button onClick={addText}><Type size={17}/> Добавить надпись</button><button onClick={() => setPainting(value => !value)}><Brush size={17}/> {painting ? 'Закрыть кисть' : 'Рисовать'}</button></div><small>PNG, JPG, WebP · до 8 МБ · только в вашем браузере</small></section>
       <section className="aw-tool-section"><div className="aw-tool-heading"><h2><span>04</span> Слои</h2><div><button aria-label="Отменить" disabled={!design.past.length} onClick={design.undo}><Undo2 size={16}/></button><button aria-label="Повторить" disabled={!design.future.length} onClick={design.redo}><Redo2 size={16}/></button></div></div>
         {design.layers.length ? <div className="aw-layer-list">{design.layers.map((layer, index) => <div key={layer.id} className={selected === layer.id ? 'active' : ''}><button onClick={() => {setSelected(layer.id); setActive(layer.areaId);}}>{layer.kind === 'image' ? <ImagePlus size={15}/> : <Type size={15}/>} <span>{layer.kind === 'image' ? layer.image?.name : layer.text}</span></button><button aria-label="Слой выше" disabled={index === design.layers.length - 1} onClick={() => design.moveLayer(layer.id, 1)}><ArrowUp size={14}/></button><button aria-label="Слой ниже" disabled={index === 0} onClick={() => design.moveLayer(layer.id, -1)}><ArrowDown size={14}/></button><button aria-label="Удалить слой" onClick={() => {design.removeLayer(layer.id); setSelected(null);}}><Trash2 size={14}/></button></div>)}</div> : <p>Добавьте изображение или надпись.</p>}
         {selectedLayer && <div className="aw-properties"><strong>Настройки слоя</strong>
